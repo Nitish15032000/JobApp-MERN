@@ -44,7 +44,7 @@ export const getCompany = async (req, res) => {
         }
         return res.status(200).json({
             companies,
-            success:true
+            success: true
         })
     } catch (error) {
         console.log(error);
@@ -71,14 +71,26 @@ export const getCompanyById = async (req, res) => {
 }
 export const updateCompany = async (req, res) => {
     try {
-        const { name, description, website, location } = req.body;
- 
-        const file = req.file;
-        // idhar cloudinary ayega
-        const fileUri = getDataUri(file);
-        const cloudResponse = await cloudinary.uploader.upload(fileUri.content);
-        const logo = cloudResponse.secure_url;
-    
+        const { name, description, website, location, logo } = req.body;
+
+        // Check if the company exists and belongs to the user
+        if (name) {
+            const existing = await Company.findOne({ name, _id: { $ne: req.params.id } });
+            if (existing) {
+                return res.status(400).json({
+                    message: "Company name already in use.",
+                    success: false
+                });
+            }
+        }
+        
+        let cloudResponse;
+        if (req.file) {
+            const fileUri = getDataUri(req.file);
+            cloudResponse = await cloudinary.uploader.upload(fileUri.content);
+            logo = cloudResponse.secure_url;
+        }
+
         const updateData = { name, description, website, location, logo };
 
         const company = await Company.findByIdAndUpdate(req.params.id, updateData, { new: true });
@@ -90,8 +102,8 @@ export const updateCompany = async (req, res) => {
             })
         }
         return res.status(200).json({
-            message:"Company information updated.",
-            success:true
+            message: "Company information updated.",
+            success: true
         })
 
     } catch (error) {
